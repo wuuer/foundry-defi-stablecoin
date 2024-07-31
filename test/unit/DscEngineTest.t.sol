@@ -114,6 +114,19 @@ contract DscEngineTest is Test {
         vm.stopPrank();
     }
 
+    //////////////////
+    //  mintDSC    //
+    ////////////////
+
+    function testMintDSCTooMuch() public depositedCollateral {
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__BreakHealthFactor.selector, 2.5e17));
+        dscEngine.mintDSC(40000 ether);
+    }
+
+    function testMintDSCSuccess() public depositedCollateral {
+        dscEngine.mintDSC(5000 ether);
+    }
+
     //////////////////////////////
     // redeemCollateral Tests  //
     //////////////////////////////
@@ -265,6 +278,58 @@ contract DscEngineTest is Test {
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCallateral;
         assert(beforeLiquidatedCollateral - totalCollateralToRedeem == afterLiquidatedCollateral);
 
+        vm.stopPrank();
+    }
+
+    function testHealthFactorNotImprovedAfterLiquidateAUserWhoseHealthFactorIsNotOk()
+        public
+        UserERC20Approve
+        UserDepositCollateralAndMintDSC
+    {
+        address badUser = makeAddr("badUser");
+        ERC20Mock(weth).mint(badUser, STARING_ERC20_BALANCE);
+        vm.startPrank(badUser);
+        // 12 : 6
+        ERC20Mock(weth).approve(address(dscEngine), 0.006 ether);
+        dscEngine.depositCollateralAndMintDSC(weth, 0.006 ether, 6 ether);
+
+        // change weth price from $2000 to $1167
+        // 5 : 6
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(833e8);
+
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        uint256 debtToCover = 0.91 ether;
+        dsc.approve(address(dscEngine), debtToCover);
+        vm.expectRevert(DSCEngine.DSCEngine__HealthFactorNotImproved.selector);
+        dscEngine.liquidate(weth, badUser, debtToCover); // 0.91 + 10% bonus = 1 USD
+        vm.stopPrank();
+    }
+
+    function testRevertBreakHealthFactorAfterLiquidateAUserWhoseHealthFactorIsNotOk()
+        public
+        UserERC20Approve
+        UserDepositCollateralAndMintDSC
+    {
+        address badUser = makeAddr("badUser");
+        ERC20Mock(weth).mint(badUser, STARING_ERC20_BALANCE);
+        vm.startPrank(badUser);
+        // 12 : 6
+        ERC20Mock(weth).approve(address(dscEngine), 0.006 ether);
+        dscEngine.depositCollateralAndMintDSC(weth, 0.006 ether, 6 ether);
+
+        // change weth price from $2000 to $1167
+        // 7 : 6
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(1167e8);
+
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        uint256 debtToCover = 0.91 ether;
+        dsc.approve(address(dscEngine), debtToCover);
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__BreakHealthFactor.selector, 687819253438113948));
+        dscEngine.liquidate(weth, badUser, debtToCover); // 0.91 + 10% bonus = 1 USD
         vm.stopPrank();
     }
 }

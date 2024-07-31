@@ -178,8 +178,7 @@ contract DSCEngine is ReentrancyGuard {
      */
     function mintDSC(uint256 amountDSCToMint) public moreThanZero(amountDSCToMint) nonReentrant {
         s_userDSCMinted[msg.sender] += amountDSCToMint;
-        // if they minted too much ($150 DSC,$100 ETh)
-        _revertIfHealthFactorIsBroken(msg.sender);
+        // _revertIfHealthFactorIsBroken(msg.sender);
 
         bool minted = i_decentrialiedStableCoin.mint(msg.sender, amountDSCToMint);
 
@@ -187,6 +186,7 @@ contract DSCEngine is ReentrancyGuard {
             revert DSCEngine__MintFailed();
         }
 
+        // if they minted too much ($150 DSC,$100 ETh)
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
@@ -260,7 +260,9 @@ contract DSCEngine is ReentrancyGuard {
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    function getHealthFactor() external view {}
+    function getUserHealthFactor(address user) external view returns (uint256) {
+        return _healthFactor(user);
+    }
 
     // private & internal functions
 
