@@ -228,7 +228,7 @@ contract DscEngineTest is Test {
         // 7 : 6
         MockV3Aggregator(wethUsdPriceFeed).updateAnswer(1167e8);
 
-        uint256 totalDepositedCallateral = dscEngine.getDepositedCallateral(weth);
+        uint256 totalDepositedCallateral = dscEngine.getDepositedCollateral(weth);
 
         vm.stopPrank();
 
@@ -261,7 +261,7 @@ contract DscEngineTest is Test {
         // 7 : 6
         MockV3Aggregator(wethUsdPriceFeed).updateAnswer(1167e8);
 
-        uint256 beforeLiquidatedCollateral = dscEngine.getDepositedCallateral(weth);
+        uint256 beforeLiquidatedCollateral = dscEngine.getDepositedCollateral(weth);
 
         vm.stopPrank();
 
@@ -272,7 +272,7 @@ contract DscEngineTest is Test {
         vm.stopPrank();
 
         vm.startPrank(badUser);
-        uint256 afterLiquidatedCollateral = dscEngine.getDepositedCallateral(weth);
+        uint256 afterLiquidatedCollateral = dscEngine.getDepositedCollateral(weth);
         uint256 tokenAmountFromDebtCovered = dscEngine.getTokenAnmountFromUSD(weth, debtToCover);
         uint256 bonusCallateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCallateral;

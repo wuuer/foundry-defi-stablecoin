@@ -8,6 +8,8 @@ import {DecentrializedStableCoin} from "./DecentrializedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {OracleLib} from "./libraries/OracleLib.sol";
+
 /**
  * @title DSCEngine
  * @author
@@ -26,7 +28,6 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
  * @notice This contract is the core of the DSC system.It hadles all the logic for mining and redeeming DSC,as well as depositing & withrawing collateral.
  * @notice This contract is VERY loosely based on the MakerDAO DSS (DAI) system.
  */
-
 contract DSCEngine is ReentrancyGuard {
     /* errors */
     error DSCEngine__NeedMoreThanZero();
@@ -38,6 +39,10 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__HealthFactorOK();
     error DSCEngine__HealthFactorNotImproved();
     error DSCEngine__CollateralOver(uint256 totalCallateralValueInUSD, uint256 totalCollateralToRedeem);
+
+    /* types */
+
+    using OracleLib for AggregatorV3Interface;
 
     /* state Variables */
     uint256 public constant ADDITIONAL_PRICE_PRECISION = 1e10;
@@ -349,7 +354,7 @@ contract DSCEngine is ReentrancyGuard {
         returns (uint256)
     {
         // It will returns number with 8 decimals
-        (, int256 answer,,,) = AggregatorV3Interface(i_tokenPriceFeeds[tokenAddress]).latestRoundData();
+        (, int256 answer,,,) = AggregatorV3Interface(i_tokenPriceFeeds[tokenAddress]).stalePriceCheck();
 
         // convert to Wei then convert back to original
         return (uint256(answer) * ADDITIONAL_PRICE_PRECISION * amount) / PRECISION;
@@ -357,7 +362,7 @@ contract DSCEngine is ReentrancyGuard {
 
     function getTokenAnmountFromUSD(address tokenAddress, uint256 usdAmountInWei) public view returns (uint256) {
         // It will returns number with 8 decimals
-        (, int256 answer,,,) = AggregatorV3Interface(i_tokenPriceFeeds[tokenAddress]).latestRoundData();
+        (, int256 answer,,,) = AggregatorV3Interface(i_tokenPriceFeeds[tokenAddress]).stalePriceCheck();
         // 2000$ -> 1weth
         // 5.45$ -> 5.45$ / 2000$ * 1 weth = 0.00275 weth
         // enlarge the deimals part in case
@@ -372,7 +377,7 @@ contract DSCEngine is ReentrancyGuard {
         return _getAccountInformation(msg.sender);
     }
 
-    function getDepositedCallateral(address tokenCollateralAddress) external view returns (uint256) {
+    function getDepositedCollateral(address tokenCollateralAddress) external view returns (uint256) {
         return s_collateralDeposited[msg.sender][tokenCollateralAddress];
     }
 
@@ -382,5 +387,17 @@ contract DSCEngine is ReentrancyGuard {
 
     function getLIQUIDATIONBONUS() external pure returns (uint256) {
         return LIQUIDATION_BONUS;
+    }
+
+    function getCollateralTokens() external view returns (address[] memory) {
+        return s_collateralTokens;
+    }
+
+    function getLIQUIDATION_THRESHOLD() external pure returns (uint256) {
+        return LIQUIDATION_THRESHOLD;
+    }
+
+    function getTokenPriceFeed(address token) external view returns (address) {
+        return s_priceFeeds[token];
     }
 }
