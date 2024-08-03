@@ -210,7 +210,7 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     /**
-     * If someone is almost undercollateralled , we will pay you to liquidate them !
+     * If someone is almost undercollateralized , we will pay you to liquidate them !
      * @param collateralTokenAddress The erc20 collateral address to liquidate from the user
      * @param user The user who has broken the health factor . Their _healthFactor should be
      * below MIN_HEALTh_FACTOR
